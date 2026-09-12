@@ -103,6 +103,7 @@ async function ambilSemua(): Promise<Semua> {
       jk: s.jk,
       kelasId: s.kelas_id,
       wali: s.wali,
+      tanggalLahir: s.tanggal_lahir,
     })),
     mapelKelas: petaMapelKelas,
     nilai: (nilai.data ?? []).map((n) => ({
