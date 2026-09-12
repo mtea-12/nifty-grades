@@ -125,7 +125,9 @@ function DataSiswa() {
       jk: s.jk,
       kelasId: s.kelasId ?? "",
       wali: s.wali,
+      tanggalLahir: s.tanggalLahir ?? "",
     });
+    setGalat({});
   }
 
   async function simpan() {
