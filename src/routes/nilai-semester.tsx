@@ -43,8 +43,15 @@ function NilaiPerSemester() {
   );
   const aktif = tahunAjaran.find((t) => t.aktif);
 
-  const [tahun, setTahun] = React.useState(aktif?.tahun ?? daftarTahun[0] ?? "");
+  const [tahun, setTahun] = React.useState("");
   const [semester, setSemester] = React.useState(aktif?.semester ?? "Ganjil");
+
+  React.useEffect(() => {
+    if (!tahun && daftarTahun.length > 0) {
+      setTahun(aktif?.tahun ?? daftarTahun[0]!);
+      if (aktif?.semester) setSemester(aktif.semester);
+    }
+  }, [tahun, daftarTahun, aktif]);
   const [kls, setKls] = React.useState("semua");
   const [siswaId, setSiswaId] = React.useState("");
   const [cariSiswa, setCariSiswa] = React.useState("");
