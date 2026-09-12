@@ -322,32 +322,51 @@ function DataSiswa() {
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-1 text-sm">
-                  <span className="font-medium">NIS</span>
+                  <span className="font-medium">NIS <span className="text-destructive">*</span></span>
                   <input
                     value={form.nis}
                     onChange={(e) => setForm({ ...form, nis: e.target.value })}
                     maxLength={20}
+                    inputMode="numeric"
+                    placeholder="cth: 2401"
                     className={inputCls}
                   />
+                  {galat.nis && <span className="block text-xs text-destructive">{galat.nis}</span>}
                 </label>
                 <label className="space-y-1 text-sm">
-                  <span className="font-medium">NISN</span>
+                  <span className="font-medium">NISN <span className="text-destructive">*</span></span>
                   <input
                     value={form.nisn}
                     onChange={(e) => setForm({ ...form, nisn: e.target.value })}
-                    maxLength={20}
+                    maxLength={10}
+                    inputMode="numeric"
+                    placeholder="10 digit angka"
                     className={inputCls}
                   />
+                  {galat.nisn && <span className="block text-xs text-destructive">{galat.nisn}</span>}
                 </label>
               </div>
               <label className="block space-y-1 text-sm">
-                <span className="font-medium">Nama Siswa</span>
+                <span className="font-medium">Nama Siswa <span className="text-destructive">*</span></span>
                 <input
                   value={form.nama}
                   onChange={(e) => setForm({ ...form, nama: e.target.value })}
                   maxLength={80}
+                  placeholder="Nama lengkap siswa"
                   className={inputCls}
                 />
+                {galat.nama && <span className="block text-xs text-destructive">{galat.nama}</span>}
+              </label>
+              <label className="block space-y-1 text-sm">
+                <span className="font-medium">Tanggal Lahir <span className="text-destructive">*</span></span>
+                <input
+                  type="date"
+                  value={form.tanggalLahir}
+                  onChange={(e) => setForm({ ...form, tanggalLahir: e.target.value })}
+                  max={new Date().toISOString().slice(0, 10)}
+                  className={inputCls}
+                />
+                {galat.tanggalLahir && <span className="block text-xs text-destructive">{galat.tanggalLahir}</span>}
               </label>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1 text-sm">
