@@ -384,18 +384,16 @@ function DataSiswa() {
                   </div>
                 </div>
                 <div className="space-y-1 text-sm">
-                  <span className="font-medium">Kelas</span>
+                  <span className="font-medium">Kelas <span className="text-destructive">*</span></span>
                   <div>
                     <Pilih
                       label="Kelas"
                       nilai={form.kelasId}
                       onUbah={(v) => setForm({ ...form, kelasId: v })}
-                      opsi={[
-                        { value: "", label: "Belum ada kelas" },
-                        ...kelas.map((k) => ({ value: k.id, label: k.nama })),
-                      ]}
+                      opsi={kelas.map((k) => ({ value: k.id, label: k.nama }))}
                     />
                   </div>
+                  {galat.kelasId && <span className="block text-xs text-destructive">{galat.kelasId}</span>}
                 </div>
               </div>
               <label className="block space-y-1 text-sm">
