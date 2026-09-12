@@ -44,7 +44,7 @@ async function ambilSemua(): Promise<Semua> {
     supabase.from("kelas").select("*").order("nama"),
     supabase.from("kelas_mapel").select("*"),
     supabase.from("siswa").select("*").order("nis"),
-    supabase.from("nilai").select("siswa_id, mapel_id, tugas, pts, pas"),
+    supabase.from("nilai").select("siswa_id, mapel_id, tahun_ajaran_id, tugas, pts, pas, hadir, pertemuan"),
   ]);
 
   const galat = [sekolah, ta, mapel, guru, kelas, km, siswa, nilai].find((r) => r.error);
