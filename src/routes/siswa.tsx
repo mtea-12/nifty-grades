@@ -1,6 +1,7 @@
 import * as React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PanelTabel, Pilih, thCls, tdCls, KosongTabel, Lencana } from "@/components/Tabel";
@@ -48,9 +49,45 @@ type FormSiswa = {
   jk: string;
   kelasId: string;
   wali: string;
+  tanggalLahir: string;
 };
 
-const KOSONG: FormSiswa = { id: null, nis: "", nisn: "", nama: "", jk: "L", kelasId: "", wali: "" };
+const KOSONG: FormSiswa = { id: null, nis: "", nisn: "", nama: "", jk: "L", kelasId: "", wali: "", tanggalLahir: "" };
+
+const skemaSiswa = z.object({
+  nis: z
+    .string()
+    .trim()
+    .min(1, "NIS wajib diisi.")
+    .regex(/^\d{4,20}$/, "NIS harus berupa 4–20 digit angka."),
+  nisn: z
+    .string()
+    .trim()
+    .min(1, "NISN wajib diisi.")
+    .regex(/^\d{10}$/, "NISN harus tepat 10 digit angka."),
+  nama: z
+    .string()
+    .trim()
+    .min(1, "Nama siswa wajib diisi.")
+    .min(3, "Nama minimal 3 karakter.")
+    .max(80, "Nama maksimal 80 karakter.")
+    .regex(/^[A-Za-zÀ-ÿ'.,\- ]+$/, "Nama hanya boleh berisi huruf, spasi, titik, koma, apostrof, atau tanda hubung."),
+  kelasId: z.string().min(1, "Kelas wajib dipilih."),
+  tanggalLahir: z
+    .string()
+    .min(1, "Tanggal lahir wajib diisi.")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal lahir tidak valid.")
+    .refine((v) => {
+      const d = new Date(`${v}T00:00:00`);
+      if (Number.isNaN(d.getTime())) return false;
+      const kini = new Date();
+      const batasBawah = new Date(kini.getFullYear() - 25, kini.getMonth(), kini.getDate());
+      const batasAtas = new Date(kini.getFullYear() - 10, kini.getMonth(), kini.getDate());
+      return d >= batasBawah && d <= batasAtas;
+    }, "Tanggal lahir tidak masuk akal untuk usia siswa (10–25 tahun)."),
+});
+
+type GalatForm = Partial<Record<"nis" | "nisn" | "nama" | "kelasId" | "tanggalLahir", string>>;
 
 const inputCls =
   "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring/30";
