@@ -113,6 +113,7 @@ function DataSiswa() {
 
   function bukaTambah() {
     setForm({ ...KOSONG, kelasId: kls !== "semua" ? kls : (kelas[0]?.id ?? "") });
+    setGalat({});
   }
 
   function bukaEdit(id: string) {
@@ -133,19 +134,33 @@ function DataSiswa() {
 
   async function simpan() {
     if (!form) return;
-    const nis = form.nis.trim();
-    const nama = form.nama.trim();
-    if (!nis || !nama) {
-      toast.error("NIS dan nama siswa wajib diisi.");
+    const hasilValidasi = skemaSiswa.safeParse(form);
+    if (!hasilValidasi.success) {
+      const g: GalatForm = {};
+      for (const isu of hasilValidasi.error.issues) {
+        const kunci = isu.path[0] as keyof GalatForm;
+        if (!g[kunci]) g[kunci] = isu.message;
+      }
+      setGalat(g);
+      toast.error("Periksa kembali isian form — ada data yang belum valid.");
+      return;
+    }
+    setGalat({});
+    const v = hasilValidasi.data;
+    const duplikatNisn = siswa.some((s) => s.nisn === v.nisn && s.id !== form.id);
+    if (duplikatNisn) {
+      setGalat({ nisn: "NISN sudah digunakan siswa lain." });
+      toast.error("NISN sudah terdaftar atas nama siswa lain.");
       return;
     }
     const baris = {
-      nis,
-      nisn: form.nisn.trim(),
-      nama,
+      nis: v.nis,
+      nisn: v.nisn,
+      nama: v.nama,
       jk: form.jk,
-      kelas_id: form.kelasId || null,
+      kelas_id: v.kelasId,
       wali: form.wali.trim(),
+      tanggal_lahir: v.tanggalLahir,
     };
     setSibuk(true);
     try {
