@@ -56,6 +56,7 @@ function NilaiPerSiswa() {
     if (search.siswa) {
       setSiswaId(search.siswa);
       const s = siswa.find((x) => x.id === search.siswa);
+      if (s) setCariSiswa(`${s.nis} · ${s.nama}`);
       if (s?.kelasId) setKls(s.kelasId);
     }
   }, [search.siswa, siswa]);
