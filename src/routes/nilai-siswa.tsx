@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Download, Save, Upload } from "lucide-react";
+import { Download, Save, Search, Upload, X } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PanelTabel, Pilih, thCls, tdCls, KosongTabel, Lencana } from "@/components/Tabel";
 import { useAuth } from "@/lib/auth";
@@ -34,12 +34,15 @@ export const Route = createFileRoute("/nilai-siswa")({
 type Draf = Record<string, { tugas: string; pts: string; pas: string }>;
 
 function NilaiPerSiswa() {
-  const { kelas, mapel, mapelKelas, kkmMapel, nilai, siswa, simpanNilai } = useData();
+  const { kelas, mapel, mapelKelas, kkmMapel, nilai, siswa, simpanNilai, namaKelas } = useData();
   const { akun } = useAuth();
   const search = useSearch({ from: "/nilai-siswa" });
 
   const [kls, setKls] = React.useState("semua");
   const [siswaId, setSiswaId] = React.useState<string>(search.siswa ?? "");
+  const [cariSiswa, setCariSiswa] = React.useState("");
+  const [saranBuka, setSaranBuka] = React.useState(false);
+  const [aktifIdx, setAktifIdx] = React.useState(0);
   const [cari, setCari] = React.useState("");
   const [draf, setDraf] = React.useState<Draf>({});
   const [menyimpan, setMenyimpan] = React.useState(false);
@@ -53,6 +56,7 @@ function NilaiPerSiswa() {
     if (search.siswa) {
       setSiswaId(search.siswa);
       const s = siswa.find((x) => x.id === search.siswa);
+      if (s) setCariSiswa(`${s.nis} · ${s.nama}`);
       if (s?.kelasId) setKls(s.kelasId);
     }
   }, [search.siswa, siswa]);
@@ -67,6 +71,29 @@ function NilaiPerSiswa() {
 
   const daftarSiswa = siswa.filter((s) => kls === "semua" || s.kelasId === kls);
   const terpilih = siswa.find((s) => s.id === siswaId) ?? null;
+
+  const kueri = cariSiswa.trim().toLowerCase();
+  const saran =
+    kueri.length >= 3
+      ? daftarSiswa
+          .filter((s) => s.nama.toLowerCase().includes(kueri) || s.nis.toLowerCase().includes(kueri))
+          .slice(0, 20)
+      : [];
+
+  function pilihSiswa(id: string) {
+    const s = siswa.find((x) => x.id === id);
+    setSiswaId(id);
+    setCariSiswa(s ? `${s.nis} · ${s.nama}` : "");
+    setSaranBuka(false);
+    setDraf({});
+  }
+
+  function hapusPilihan() {
+    setSiswaId("");
+    setCariSiswa("");
+    setSaranBuka(false);
+    setDraf({});
+  }
 
   const mapelSiswa = terpilih
     ? mapel.filter((m) => {
@@ -188,22 +215,86 @@ function NilaiPerSiswa() {
           onUbah={(v) => {
             setKls(v);
             setSiswaId("");
+            setCariSiswa("");
+            setSaranBuka(false);
             setDraf({});
           }}
           opsi={[{ value: "semua", label: "Semua Kelas" }, ...kelas.map((k) => ({ value: k.id, label: k.nama }))]}
         />
-        <Pilih
-          label="Pilih siswa"
-          nilai={siswaId}
-          onUbah={(v) => {
-            setSiswaId(v);
-            setDraf({});
-          }}
-          opsi={[
-            { value: "", label: "— Pilih siswa —" },
-            ...daftarSiswa.map((s) => ({ value: s.id, label: `${s.nis} · ${s.nama}` })),
-          ]}
-        />
+        <div className="relative flex flex-col gap-1">
+          <span className="text-xs font-semibold text-muted-foreground">Cari siswa</span>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={cariSiswa}
+              placeholder="Ketik min. 3 huruf nama/NIS siswa…"
+              aria-label="Cari siswa"
+              onFocus={() => setSaranBuka(true)}
+              onBlur={() => setTimeout(() => setSaranBuka(false), 150)}
+              onChange={(e) => {
+                setCariSiswa(e.target.value);
+                setSiswaId("");
+                setDraf({});
+                setAktifIdx(0);
+                setSaranBuka(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown" && saran.length > 0) {
+                  e.preventDefault();
+                  setSaranBuka(true);
+                  setAktifIdx((i) => (i + 1) % saran.length);
+                } else if (e.key === "ArrowUp" && saran.length > 0) {
+                  e.preventDefault();
+                  setAktifIdx((i) => (i - 1 + saran.length) % saran.length);
+                } else if (e.key === "Enter" && saranBuka && saran[aktifIdx]) {
+                  e.preventDefault();
+                  pilihSiswa(saran[aktifIdx].id);
+                } else if (e.key === "Escape") {
+                  setSaranBuka(false);
+                }
+              }}
+              className="w-full min-w-64 rounded-lg border border-input bg-background py-2 pl-8 pr-8 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring/30"
+            />
+            {siswaId && (
+              <button
+                type="button"
+                aria-label="Hapus pilihan siswa"
+                onClick={hapusPilihan}
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {kueri.length > 0 && kueri.length < 3 && (
+            <span className="text-xs text-muted-foreground">Ketik minimal 3 huruf untuk mencari…</span>
+          )}
+          {saranBuka && kueri.length >= 3 && (
+            <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-64 overflow-auto rounded-lg border border-border bg-card shadow-lg">
+              {saran.length === 0 && (
+                <li className="px-3 py-2 text-sm text-muted-foreground">Siswa tidak ditemukan.</li>
+              )}
+              {saran.map((s, i) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => pilihSiswa(s.id)}
+                    onMouseEnter={() => setAktifIdx(i)}
+                    className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm ${
+                      i === aktifIdx ? "bg-secondary" : "hover:bg-secondary/60"
+                    }`}
+                  >
+                    <span>
+                      <span className="font-mono text-xs font-semibold">{s.nis}</span> · {s.nama}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{namaKelas(s.kelasId)}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
         <p className="text-sm text-muted-foreground">Bobot: Tugas 30% · PTS 30% · PAS 40%</p>
       </div>
 
