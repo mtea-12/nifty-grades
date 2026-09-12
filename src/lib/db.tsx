@@ -129,7 +129,9 @@ type Ctx = Semua & {
   kodeMapel: (id: string | null | undefined) => string;
   namaGuru: (id: string | null | undefined) => string;
   kkmMapel: (id: string | null | undefined) => number;
-  simpanNilai: (baris: Nilai[]) => Promise<void>;
+  /** Semua nilai dari seluruh tahun ajaran. */
+  semuaNilai: Nilai[];
+  simpanNilai: (baris: Nilai[], tahunAjaranId?: string) => Promise<void>;
 };
 
 const DataContext = React.createContext<Ctx | null>(null);
