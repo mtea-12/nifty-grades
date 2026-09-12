@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Download, Save, Upload } from "lucide-react";
+import { Download, Save, Search, Upload, X } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PanelTabel, Pilih, thCls, tdCls, KosongTabel, Lencana } from "@/components/Tabel";
 import { useAuth } from "@/lib/auth";
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/nilai-siswa")({
 type Draf = Record<string, { tugas: string; pts: string; pas: string }>;
 
 function NilaiPerSiswa() {
-  const { kelas, mapel, mapelKelas, kkmMapel, nilai, siswa, simpanNilai } = useData();
+  const { kelas, mapel, mapelKelas, kkmMapel, nilai, siswa, simpanNilai, namaKelas } = useData();
   const { akun } = useAuth();
   const search = useSearch({ from: "/nilai-siswa" });
 
