@@ -1,10 +1,32 @@
 import * as React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PanelTabel, Pilih, thCls, tdCls, KosongTabel, Lencana } from "@/components/Tabel";
 import { useData } from "@/lib/db";
 import { useAuth } from "@/lib/auth";
 import { nilaiAkhir } from "@/lib/data";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/siswa")({
   head: () => ({
@@ -18,13 +40,31 @@ export const Route = createFileRoute("/siswa")({
   component: DataSiswa,
 });
 
+type FormSiswa = {
+  id: string | null;
+  nis: string;
+  nisn: string;
+  nama: string;
+  jk: string;
+  kelasId: string;
+  wali: string;
+};
+
+const KOSONG: FormSiswa = { id: null, nis: "", nisn: "", nama: "", jk: "L", kelasId: "", wali: "" };
+
+const inputCls =
+  "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring/30";
+
 function DataSiswa() {
-  const { kelas, namaKelas, siswa, nilai } = useData();
+  const { kelas, namaKelas, siswa, nilai, segarkan } = useData();
   const { akun } = useAuth();
   const isAdmin = akun?.peran === "admin";
   const [cari, setCari] = React.useState("");
   const [kls, setKls] = React.useState("semua");
   const [jk, setJk] = React.useState("semua");
+  const [form, setForm] = React.useState<FormSiswa | null>(null);
+  const [hapusId, setHapusId] = React.useState<string | null>(null);
+  const [sibuk, setSibuk] = React.useState(false);
 
   const hasil = siswa.filter(
     (s) =>
@@ -33,8 +73,84 @@ function DataSiswa() {
       (s.nama.toLowerCase().includes(cari.toLowerCase()) || s.nis.includes(cari) || s.nisn.includes(cari)),
   );
 
+  function bukaTambah() {
+    setForm({ ...KOSONG, kelasId: kls !== "semua" ? kls : (kelas[0]?.id ?? "") });
+  }
+
+  function bukaEdit(id: string) {
+    const s = siswa.find((x) => x.id === id);
+    if (!s) return;
+    setForm({
+      id: s.id,
+      nis: s.nis,
+      nisn: s.nisn,
+      nama: s.nama,
+      jk: s.jk,
+      kelasId: s.kelasId ?? "",
+      wali: s.wali,
+    });
+  }
+
+  async function simpan() {
+    if (!form) return;
+    const nis = form.nis.trim();
+    const nama = form.nama.trim();
+    if (!nis || !nama) {
+      toast.error("NIS dan nama siswa wajib diisi.");
+      return;
+    }
+    const baris = {
+      nis,
+      nisn: form.nisn.trim(),
+      nama,
+      jk: form.jk,
+      kelas_id: form.kelasId || null,
+      wali: form.wali.trim(),
+    };
+    setSibuk(true);
+    try {
+      if (form.id) {
+        const { error } = await supabase.from("siswa").update(baris).eq("id", form.id);
+        if (error) throw new Error(error.message);
+      } else {
+        const { error } = await supabase.from("siswa").insert(baris);
+        if (error) throw new Error(error.message);
+      }
+      await segarkan();
+      toast.success(form.id ? "Data siswa diperbarui." : "Siswa ditambahkan.");
+      setForm(null);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSibuk(false);
+    }
+  }
+
+  async function hapus() {
+    if (!hapusId) return;
+    setSibuk(true);
+    try {
+      const { error } = await supabase.from("siswa").delete().eq("id", hapusId);
+      if (error) throw new Error(error.message);
+      await segarkan();
+      toast.success("Siswa dihapus.");
+      setHapusId(null);
+    } catch {
+      toast.error("Gagal menghapus. Pastikan siswa belum memiliki data nilai.");
+    } finally {
+      setSibuk(false);
+    }
+  }
+
   return (
     <AppLayout judul="Data Siswa" deskripsi={`${hasil.length} siswa ditampilkan dari ${siswa.length} total`}>
+      {isAdmin && (
+        <div className="mb-4 flex justify-end">
+          <Button onClick={bukaTambah} className="gap-2">
+            <Plus className="h-4 w-4" /> Tambah Siswa
+          </Button>
+        </div>
+      )}
       <PanelTabel
         cari={cari}
         onCari={setCari}
@@ -107,13 +223,31 @@ function DataSiswa() {
                   </td>
                   {isAdmin && (
                     <td className={tdCls}>
-                      <Link
-                        to="/nilai-siswa"
-                        search={{ siswa: s.id }}
-                        className="font-semibold text-primary hover:underline"
-                      >
-                        Isi nilai
-                      </Link>
+                      <div className="flex items-center gap-1">
+                        <Link
+                          to="/nilai-siswa"
+                          search={{ siswa: s.id }}
+                          className="mr-1 font-semibold text-primary hover:underline"
+                        >
+                          Isi nilai
+                        </Link>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Edit ${s.nama}`}
+                          onClick={() => bukaEdit(s.id)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          aria-label={`Hapus ${s.nama}`}
+                          onClick={() => setHapusId(s.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -122,6 +256,112 @@ function DataSiswa() {
           </tbody>
         </table>
       </PanelTabel>
+
+      <Dialog open={!!form} onOpenChange={(o) => !o && setForm(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{form?.id ? "Edit Siswa" : "Tambah Siswa"}</DialogTitle>
+            <DialogDescription>Lengkapi data induk siswa lalu simpan.</DialogDescription>
+          </DialogHeader>
+          {form && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">NIS</span>
+                  <input
+                    value={form.nis}
+                    onChange={(e) => setForm({ ...form, nis: e.target.value })}
+                    maxLength={20}
+                    className={inputCls}
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-medium">NISN</span>
+                  <input
+                    value={form.nisn}
+                    onChange={(e) => setForm({ ...form, nisn: e.target.value })}
+                    maxLength={20}
+                    className={inputCls}
+                  />
+                </label>
+              </div>
+              <label className="block space-y-1 text-sm">
+                <span className="font-medium">Nama Siswa</span>
+                <input
+                  value={form.nama}
+                  onChange={(e) => setForm({ ...form, nama: e.target.value })}
+                  maxLength={80}
+                  className={inputCls}
+                />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1 text-sm">
+                  <span className="font-medium">Jenis Kelamin</span>
+                  <div>
+                    <Pilih
+                      label="Jenis kelamin"
+                      nilai={form.jk}
+                      onUbah={(v) => setForm({ ...form, jk: v })}
+                      opsi={[
+                        { value: "L", label: "Laki-laki" },
+                        { value: "P", label: "Perempuan" },
+                      ]}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <span className="font-medium">Kelas</span>
+                  <div>
+                    <Pilih
+                      label="Kelas"
+                      nilai={form.kelasId}
+                      onUbah={(v) => setForm({ ...form, kelasId: v })}
+                      opsi={[
+                        { value: "", label: "Belum ada kelas" },
+                        ...kelas.map((k) => ({ value: k.id, label: k.nama })),
+                      ]}
+                    />
+                  </div>
+                </div>
+              </div>
+              <label className="block space-y-1 text-sm">
+                <span className="font-medium">Orang Tua/Wali</span>
+                <input
+                  value={form.wali}
+                  onChange={(e) => setForm({ ...form, wali: e.target.value })}
+                  maxLength={80}
+                  className={inputCls}
+                />
+              </label>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setForm(null)} disabled={sibuk}>
+              Batal
+            </Button>
+            <Button onClick={simpan} disabled={sibuk}>
+              {sibuk ? "Menyimpan…" : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!hapusId} onOpenChange={(o) => !o && setHapusId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus siswa ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tindakan ini tidak dapat dibatalkan. Siswa yang sudah memiliki nilai tidak dapat dihapus.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={sibuk}>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={(e) => { e.preventDefault(); void hapus(); }} disabled={sibuk}>
+              Hapus
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppLayout>
   );
 }
