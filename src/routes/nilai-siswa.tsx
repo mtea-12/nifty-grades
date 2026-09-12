@@ -72,6 +72,29 @@ function NilaiPerSiswa() {
   const daftarSiswa = siswa.filter((s) => kls === "semua" || s.kelasId === kls);
   const terpilih = siswa.find((s) => s.id === siswaId) ?? null;
 
+  const kueri = cariSiswa.trim().toLowerCase();
+  const saran =
+    kueri.length >= 3
+      ? daftarSiswa
+          .filter((s) => s.nama.toLowerCase().includes(kueri) || s.nis.toLowerCase().includes(kueri))
+          .slice(0, 20)
+      : [];
+
+  function pilihSiswa(id: string) {
+    const s = siswa.find((x) => x.id === id);
+    setSiswaId(id);
+    setCariSiswa(s ? `${s.nis} · ${s.nama}` : "");
+    setSaranBuka(false);
+    setDraf({});
+  }
+
+  function hapusPilihan() {
+    setSiswaId("");
+    setCariSiswa("");
+    setSaranBuka(false);
+    setDraf({});
+  }
+
   const mapelSiswa = terpilih
     ? mapel.filter((m) => {
         const daftar = mapelKelas[terpilih.kelasId ?? ""] ?? [];
