@@ -58,6 +58,7 @@ export type Siswa = {
   jk: string;
   kelasId: string | null;
   wali: string;
+  tanggalLahir: string | null;
 };
 
 export type Nilai = {

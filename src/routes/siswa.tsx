@@ -1,6 +1,7 @@
 import * as React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { AppLayout } from "@/components/AppLayout";
 import { PanelTabel, Pilih, thCls, tdCls, KosongTabel, Lencana } from "@/components/Tabel";
@@ -48,9 +49,45 @@ type FormSiswa = {
   jk: string;
   kelasId: string;
   wali: string;
+  tanggalLahir: string;
 };
 
-const KOSONG: FormSiswa = { id: null, nis: "", nisn: "", nama: "", jk: "L", kelasId: "", wali: "" };
+const KOSONG: FormSiswa = { id: null, nis: "", nisn: "", nama: "", jk: "L", kelasId: "", wali: "", tanggalLahir: "" };
+
+const skemaSiswa = z.object({
+  nis: z
+    .string()
+    .trim()
+    .min(1, "NIS wajib diisi.")
+    .regex(/^\d{4,20}$/, "NIS harus berupa 4–20 digit angka."),
+  nisn: z
+    .string()
+    .trim()
+    .min(1, "NISN wajib diisi.")
+    .regex(/^\d{10}$/, "NISN harus tepat 10 digit angka."),
+  nama: z
+    .string()
+    .trim()
+    .min(1, "Nama siswa wajib diisi.")
+    .min(3, "Nama minimal 3 karakter.")
+    .max(80, "Nama maksimal 80 karakter.")
+    .regex(/^[A-Za-zÀ-ÿ'.,\- ]+$/, "Nama hanya boleh berisi huruf, spasi, titik, koma, apostrof, atau tanda hubung."),
+  kelasId: z.string().min(1, "Kelas wajib dipilih."),
+  tanggalLahir: z
+    .string()
+    .min(1, "Tanggal lahir wajib diisi.")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Format tanggal lahir tidak valid.")
+    .refine((v) => {
+      const d = new Date(`${v}T00:00:00`);
+      if (Number.isNaN(d.getTime())) return false;
+      const kini = new Date();
+      const batasBawah = new Date(kini.getFullYear() - 25, kini.getMonth(), kini.getDate());
+      const batasAtas = new Date(kini.getFullYear() - 10, kini.getMonth(), kini.getDate());
+      return d >= batasBawah && d <= batasAtas;
+    }, "Tanggal lahir tidak masuk akal untuk usia siswa (10–25 tahun)."),
+});
+
+type GalatForm = Partial<Record<"nis" | "nisn" | "nama" | "kelasId" | "tanggalLahir", string>>;
 
 const inputCls =
   "w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-ring/30";
@@ -65,6 +102,7 @@ function DataSiswa() {
   const [form, setForm] = React.useState<FormSiswa | null>(null);
   const [hapusId, setHapusId] = React.useState<string | null>(null);
   const [sibuk, setSibuk] = React.useState(false);
+  const [galat, setGalat] = React.useState<GalatForm>({});
 
   const hasil = siswa.filter(
     (s) =>
@@ -75,6 +113,7 @@ function DataSiswa() {
 
   function bukaTambah() {
     setForm({ ...KOSONG, kelasId: kls !== "semua" ? kls : (kelas[0]?.id ?? "") });
+    setGalat({});
   }
 
   function bukaEdit(id: string) {
@@ -88,24 +127,40 @@ function DataSiswa() {
       jk: s.jk,
       kelasId: s.kelasId ?? "",
       wali: s.wali,
+      tanggalLahir: s.tanggalLahir ?? "",
     });
+    setGalat({});
   }
 
   async function simpan() {
     if (!form) return;
-    const nis = form.nis.trim();
-    const nama = form.nama.trim();
-    if (!nis || !nama) {
-      toast.error("NIS dan nama siswa wajib diisi.");
+    const hasilValidasi = skemaSiswa.safeParse(form);
+    if (!hasilValidasi.success) {
+      const g: GalatForm = {};
+      for (const isu of hasilValidasi.error.issues) {
+        const kunci = isu.path[0] as keyof GalatForm;
+        if (!g[kunci]) g[kunci] = isu.message;
+      }
+      setGalat(g);
+      toast.error("Periksa kembali isian form — ada data yang belum valid.");
+      return;
+    }
+    setGalat({});
+    const v = hasilValidasi.data;
+    const duplikatNisn = siswa.some((s) => s.nisn === v.nisn && s.id !== form.id);
+    if (duplikatNisn) {
+      setGalat({ nisn: "NISN sudah digunakan siswa lain." });
+      toast.error("NISN sudah terdaftar atas nama siswa lain.");
       return;
     }
     const baris = {
-      nis,
-      nisn: form.nisn.trim(),
-      nama,
+      nis: v.nis,
+      nisn: v.nisn,
+      nama: v.nama,
       jk: form.jk,
-      kelas_id: form.kelasId || null,
+      kelas_id: v.kelasId,
       wali: form.wali.trim(),
+      tanggal_lahir: v.tanggalLahir,
     };
     setSibuk(true);
     try {
@@ -267,32 +322,51 @@ function DataSiswa() {
             <div className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-1 text-sm">
-                  <span className="font-medium">NIS</span>
+                  <span className="font-medium">NIS <span className="text-destructive">*</span></span>
                   <input
                     value={form.nis}
                     onChange={(e) => setForm({ ...form, nis: e.target.value })}
                     maxLength={20}
+                    inputMode="numeric"
+                    placeholder="cth: 2401"
                     className={inputCls}
                   />
+                  {galat.nis && <span className="block text-xs text-destructive">{galat.nis}</span>}
                 </label>
                 <label className="space-y-1 text-sm">
-                  <span className="font-medium">NISN</span>
+                  <span className="font-medium">NISN <span className="text-destructive">*</span></span>
                   <input
                     value={form.nisn}
                     onChange={(e) => setForm({ ...form, nisn: e.target.value })}
-                    maxLength={20}
+                    maxLength={10}
+                    inputMode="numeric"
+                    placeholder="10 digit angka"
                     className={inputCls}
                   />
+                  {galat.nisn && <span className="block text-xs text-destructive">{galat.nisn}</span>}
                 </label>
               </div>
               <label className="block space-y-1 text-sm">
-                <span className="font-medium">Nama Siswa</span>
+                <span className="font-medium">Nama Siswa <span className="text-destructive">*</span></span>
                 <input
                   value={form.nama}
                   onChange={(e) => setForm({ ...form, nama: e.target.value })}
                   maxLength={80}
+                  placeholder="Nama lengkap siswa"
                   className={inputCls}
                 />
+                {galat.nama && <span className="block text-xs text-destructive">{galat.nama}</span>}
+              </label>
+              <label className="block space-y-1 text-sm">
+                <span className="font-medium">Tanggal Lahir <span className="text-destructive">*</span></span>
+                <input
+                  type="date"
+                  value={form.tanggalLahir}
+                  onChange={(e) => setForm({ ...form, tanggalLahir: e.target.value })}
+                  max={new Date().toISOString().slice(0, 10)}
+                  className={inputCls}
+                />
+                {galat.tanggalLahir && <span className="block text-xs text-destructive">{galat.tanggalLahir}</span>}
               </label>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1 text-sm">
@@ -310,18 +384,16 @@ function DataSiswa() {
                   </div>
                 </div>
                 <div className="space-y-1 text-sm">
-                  <span className="font-medium">Kelas</span>
+                  <span className="font-medium">Kelas <span className="text-destructive">*</span></span>
                   <div>
                     <Pilih
                       label="Kelas"
                       nilai={form.kelasId}
                       onUbah={(v) => setForm({ ...form, kelasId: v })}
-                      opsi={[
-                        { value: "", label: "Belum ada kelas" },
-                        ...kelas.map((k) => ({ value: k.id, label: k.nama })),
-                      ]}
+                      opsi={kelas.map((k) => ({ value: k.id, label: k.nama }))}
                     />
                   </div>
+                  {galat.kelasId && <span className="block text-xs text-destructive">{galat.kelasId}</span>}
                 </div>
               </div>
               <label className="block space-y-1 text-sm">
