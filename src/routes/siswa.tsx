@@ -102,6 +102,7 @@ function DataSiswa() {
   const [form, setForm] = React.useState<FormSiswa | null>(null);
   const [hapusId, setHapusId] = React.useState<string | null>(null);
   const [sibuk, setSibuk] = React.useState(false);
+  const [galat, setGalat] = React.useState<GalatForm>({});
 
   const hasil = siswa.filter(
     (s) =>
