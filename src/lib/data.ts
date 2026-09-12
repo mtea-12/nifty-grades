@@ -67,11 +67,33 @@ export type Nilai = {
   tugas: number;
   pts: number;
   pas: number;
+  hadir?: number;
+  pertemuan?: number;
+  tahunAjaranId?: string;
 };
 
 export function nilaiAkhir(n: Pick<Nilai, "tugas" | "pts" | "pas">) {
   if (!n.tugas || !n.pts || !n.pas) return 0;
   return Math.round(n.tugas * 0.3 + n.pts * 0.3 + n.pas * 0.4);
+}
+
+/** Persentase kehadiran 0-100. */
+export function persenHadir(hadir: number, pertemuan: number) {
+  if (!pertemuan || pertemuan <= 0) return 0;
+  return Math.max(0, Math.min(100, Math.round((hadir / pertemuan) * 100)));
+}
+
+/** Bobot khusus halaman Nilai Per-semester: Tugas 20%, PTS 20%, PAS 30%, Absensi 30%. */
+export function nilaiAkhirSemester(n: {
+  tugas: number;
+  pts: number;
+  pas: number;
+  hadir: number;
+  pertemuan: number;
+}) {
+  if (!n.tugas || !n.pts || !n.pas || !n.pertemuan) return 0;
+  const absen = persenHadir(n.hadir, n.pertemuan);
+  return Math.round(n.tugas * 0.2 + n.pts * 0.2 + n.pas * 0.3 + absen * 0.3);
 }
 
 export function predikat(nilai: number) {
