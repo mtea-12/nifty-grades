@@ -1,0 +1,1 @@
+ALTER TABLE public.siswa ADD COLUMN tanggal_lahir date;

@@ -286,6 +286,7 @@ export type Database = {
           nama: string
           nis: string
           nisn: string
+          tanggal_lahir: string | null
           user_id: string | null
           wali: string
         }
@@ -297,6 +298,7 @@ export type Database = {
           nama: string
           nis: string
           nisn?: string
+          tanggal_lahir?: string | null
           user_id?: string | null
           wali?: string
         }
@@ -308,6 +310,7 @@ export type Database = {
           nama?: string
           nis?: string
           nisn?: string
+          tanggal_lahir?: string | null
           user_id?: string | null
           wali?: string
         }
