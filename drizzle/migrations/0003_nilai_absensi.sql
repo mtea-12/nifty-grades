@@ -1,0 +1,2 @@
+ALTER TABLE public.nilai ADD COLUMN IF NOT EXISTS hadir integer NOT NULL DEFAULT 0;
+ALTER TABLE public.nilai ADD COLUMN IF NOT EXISTS pertemuan integer NOT NULL DEFAULT 0;

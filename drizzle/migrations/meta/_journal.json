@@ -22,6 +22,13 @@
       "when": 1789180698522,
       "tag": "0002_siswa_tanggal_lahir",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789182424576,
+      "tag": "0003_nilai_absensi",
+      "breakpoints": true
     }
   ]
 }

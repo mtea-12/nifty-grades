@@ -44,7 +44,7 @@ async function ambilSemua(): Promise<Semua> {
     supabase.from("kelas").select("*").order("nama"),
     supabase.from("kelas_mapel").select("*"),
     supabase.from("siswa").select("*").order("nis"),
-    supabase.from("nilai").select("siswa_id, mapel_id, tugas, pts, pas"),
+    supabase.from("nilai").select("siswa_id, mapel_id, tahun_ajaran_id, tugas, pts, pas, hadir, pertemuan"),
   ]);
 
   const galat = [sekolah, ta, mapel, guru, kelas, km, siswa, nilai].find((r) => r.error);
@@ -109,9 +109,12 @@ async function ambilSemua(): Promise<Semua> {
     nilai: (nilai.data ?? []).map((n) => ({
       siswaId: n.siswa_id,
       mapelId: n.mapel_id,
+      tahunAjaranId: n.tahun_ajaran_id,
       tugas: n.tugas,
       pts: n.pts,
       pas: n.pas,
+      hadir: n.hadir,
+      pertemuan: n.pertemuan,
     })),
   };
 }
@@ -126,7 +129,9 @@ type Ctx = Semua & {
   kodeMapel: (id: string | null | undefined) => string;
   namaGuru: (id: string | null | undefined) => string;
   kkmMapel: (id: string | null | undefined) => number;
-  simpanNilai: (baris: Nilai[]) => Promise<void>;
+  /** Semua nilai dari seluruh tahun ajaran. */
+  semuaNilai: Nilai[];
+  simpanNilai: (baris: Nilai[], tahunAjaranId?: string) => Promise<void>;
 };
 
 const DataContext = React.createContext<Ctx | null>(null);
@@ -150,16 +155,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [qc]);
 
   const simpanNilai = React.useCallback(
-    async (baris: Nilai[]) => {
-      if (!tahunAktifId) throw new Error("Tahun ajaran aktif belum tersedia.");
+    async (baris: Nilai[], tahunAjaranId?: string) => {
+      const ta = tahunAjaranId ?? tahunAktifId;
+      if (!ta) throw new Error("Tahun ajaran aktif belum tersedia.");
       const { error: e } = await supabase.from("nilai").upsert(
         baris.map((b) => ({
           siswa_id: b.siswaId,
           mapel_id: b.mapelId,
-          tahun_ajaran_id: tahunAktifId,
+          tahun_ajaran_id: ta,
           tugas: b.tugas,
           pts: b.pts,
           pas: b.pas,
+          ...(b.hadir === undefined ? {} : { hadir: b.hadir }),
+          ...(b.pertemuan === undefined ? {} : { pertemuan: b.pertemuan }),
         })),
         { onConflict: "siswa_id,mapel_id,tahun_ajaran_id" },
       );
@@ -171,6 +179,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const value: Ctx = {
     ...isi,
+    nilai: isi.nilai.filter((n) => !tahunAktifId || n.tahunAjaranId === tahunAktifId),
+    semuaNilai: isi.nilai,
     memuat: isLoading,
     galat: error ? (error as Error).message : null,
     segarkan,
