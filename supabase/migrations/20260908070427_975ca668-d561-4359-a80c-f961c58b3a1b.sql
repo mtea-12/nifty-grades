@@ -1,1 +1,0 @@
-REVOKE ALL ON FUNCTION public.catat_log() FROM PUBLIC, anon, authenticated;
