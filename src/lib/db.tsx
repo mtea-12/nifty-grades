@@ -109,9 +109,12 @@ async function ambilSemua(): Promise<Semua> {
     nilai: (nilai.data ?? []).map((n) => ({
       siswaId: n.siswa_id,
       mapelId: n.mapel_id,
+      tahunAjaranId: n.tahun_ajaran_id,
       tugas: n.tugas,
       pts: n.pts,
       pas: n.pas,
+      hadir: n.hadir,
+      pertemuan: n.pertemuan,
     })),
   };
 }
