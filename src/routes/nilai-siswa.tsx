@@ -40,6 +40,9 @@ function NilaiPerSiswa() {
 
   const [kls, setKls] = React.useState("semua");
   const [siswaId, setSiswaId] = React.useState<string>(search.siswa ?? "");
+  const [cariSiswa, setCariSiswa] = React.useState("");
+  const [saranBuka, setSaranBuka] = React.useState(false);
+  const [aktifIdx, setAktifIdx] = React.useState(0);
   const [cari, setCari] = React.useState("");
   const [draf, setDraf] = React.useState<Draf>({});
   const [menyimpan, setMenyimpan] = React.useState(false);
