@@ -155,16 +155,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   }, [qc]);
 
   const simpanNilai = React.useCallback(
-    async (baris: Nilai[]) => {
-      if (!tahunAktifId) throw new Error("Tahun ajaran aktif belum tersedia.");
+    async (baris: Nilai[], tahunAjaranId?: string) => {
+      const ta = tahunAjaranId ?? tahunAktifId;
+      if (!ta) throw new Error("Tahun ajaran aktif belum tersedia.");
       const { error: e } = await supabase.from("nilai").upsert(
         baris.map((b) => ({
           siswa_id: b.siswaId,
           mapel_id: b.mapelId,
-          tahun_ajaran_id: tahunAktifId,
+          tahun_ajaran_id: ta,
           tugas: b.tugas,
           pts: b.pts,
           pas: b.pas,
+          ...(b.hadir === undefined ? {} : { hadir: b.hadir }),
+          ...(b.pertemuan === undefined ? {} : { pertemuan: b.pertemuan }),
         })),
         { onConflict: "siswa_id,mapel_id,tahun_ajaran_id" },
       );
@@ -176,6 +179,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const value: Ctx = {
     ...isi,
+    nilai: isi.nilai.filter((n) => !tahunAktifId || n.tahunAjaranId === tahunAktifId),
+    semuaNilai: isi.nilai,
     memuat: isLoading,
     galat: error ? (error as Error).message : null,
     segarkan,
